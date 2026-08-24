@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- Fixed first-party DeepSeek pricing still charging the pre-2026-08-16 rate card. DeepSeek raised every bucket and introduced peak/off-peak billing effective 2026-08-16 16:00 UTC, but stencil.so keeps serving the legacy card, so regeneration re-baked stale prices. The generator now pins the authoritative off-peak tier from the pricing page: `deepseek-v4-flash` and `deepseek-v4-flash-vision-exp` at $0.22/$0.66 input/output per MTok with $0.007 cache-read, `deepseek-v4-pro` at $0.66/$1.98 with $0.022 cache-read. Peak hours (Mon–Fri 01:00–04:00 and 06:00–10:00 UTC) double every bucket and are not yet modeled; the flat card carries the off-peak tier, the closest estimator until time-of-day pricing lands.
+
 ## [18.0.4] - 2026-08-24
 
 ### Fixed

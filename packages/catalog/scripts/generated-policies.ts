@@ -447,6 +447,14 @@ function applyGeneratedModelPolicy(model: ModelSpec<Api>): void {
 			requiresReasoningContentForToolCalls: true,
 		};
 	}
+	// DeepSeek 2026-08-16 rate increase: peak/off-peak billing went live and
+	// raised every bucket (e.g. v4-flash input $0.14 → $0.22 off-peak / $0.44
+	// peak). stencil.so still serves the pre-increase card, so pin the
+	// authoritative off-peak rates from the pricing page
+	// (https://api-docs.deepseek.com/quick_start/pricing).
+	if (model.provider === "deepseek") {
+		applyDeepseekCatalogPolicy(model);
+	}
 	const parsedModel = parseKnownModel(model.id);
 	const applyPatchToolType = inferGeneratedApplyPatchToolType(model, parsedModel);
 	if (applyPatchToolType) {
@@ -488,6 +496,27 @@ function applyAnthropicCatalogPolicy(model: ModelSpec<Api>, parsedModel: Anthrop
 		model.cost.output = 50;
 		model.cost.cacheRead = 1;
 		model.cost.cacheWrite = 12.5;
+	}
+}
+
+/**
+ * DeepSeek V4 list prices after the 2026-08-16 16:00 UTC increase. The flat
+ * cost model carries the off-peak tier — the closest estimator, since peak is
+ * only 40 of 168 weekly hours. Peak doubles every bucket Mon–Fri 01:00–04:00
+ * and 06:00–10:00 UTC; the cost model has no time-of-day dimension yet, so
+ * peak-hour turns under-report by 2x until that lands. Drop this pin once
+ * stencil.so serves the post-increase card.
+ */
+const DEEPSEEK_V4_OFF_PEAK_COST: Readonly<Record<string, ModelSpec<Api>["cost"]>> = {
+	"deepseek-v4-flash": { input: 0.22, output: 0.66, cacheRead: 0.007, cacheWrite: 0 },
+	"deepseek-v4-flash-vision-exp": { input: 0.22, output: 0.66, cacheRead: 0.007, cacheWrite: 0 },
+	"deepseek-v4-pro": { input: 0.66, output: 1.98, cacheRead: 0.022, cacheWrite: 0 },
+};
+
+function applyDeepseekCatalogPolicy(model: ModelSpec<Api>): void {
+	const cost = DEEPSEEK_V4_OFF_PEAK_COST[bareModelId(model.id)];
+	if (cost) {
+		model.cost = { ...cost };
 	}
 }
 

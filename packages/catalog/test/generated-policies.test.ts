@@ -578,8 +578,44 @@ describe("generated model policies", () => {
 		expect(models[2]?.thinking).toBeDefined();
 		expect(models[2]?.compat?.supportsReasoningEffort).toBeUndefined();
 	});
-});
 
+	it("pins first-party DeepSeek models to the post-increase off-peak rate card", () => {
+		const models: ModelSpec<Api>[] = [
+			createSpec({
+				id: "deepseek-v4-flash",
+				api: "openai-completions",
+				provider: "deepseek",
+				cost: { input: 0.14, output: 0.28, cacheRead: 0.0028, cacheWrite: 0 },
+			}),
+			createSpec({
+				id: "deepseek-v4-flash-vision-exp",
+				api: "openai-completions",
+				provider: "deepseek",
+				cost: { input: 0.14, output: 0.28, cacheRead: 0.0028, cacheWrite: 0 },
+			}),
+			createSpec({
+				id: "deepseek-v4-pro",
+				api: "openai-completions",
+				provider: "deepseek",
+				cost: { input: 0.435, output: 0.87, cacheRead: 0.003625, cacheWrite: 0 },
+			}),
+			// Resold DeepSeek ids price at the host's own tariff — untouched.
+			createSpec({
+				id: "deepseek-v4-flash",
+				api: "openai-completions",
+				provider: "fireworks",
+				cost: { input: 0.14, output: 0.28, cacheRead: 0.0028, cacheWrite: 0 },
+			}),
+		];
+
+		applyGeneratedModelPolicies(models);
+
+		expect(models[0]?.cost).toEqual({ input: 0.22, output: 0.66, cacheRead: 0.007, cacheWrite: 0 });
+		expect(models[1]?.cost).toEqual({ input: 0.22, output: 0.66, cacheRead: 0.007, cacheWrite: 0 });
+		expect(models[2]?.cost).toEqual({ input: 0.66, output: 1.98, cacheRead: 0.022, cacheWrite: 0 });
+		expect(models[3]?.cost).toEqual({ input: 0.14, output: 0.28, cacheRead: 0.0028, cacheWrite: 0 });
+	});
+});
 describe("applyOllamaCloudOutputCap", () => {
 	it("pins DeepSeek V4 Pro/Flash (and their tag variants) to the enforced ceiling (#7266)", () => {
 		const models: ModelSpec<Api>[] = [
